@@ -43,7 +43,7 @@ def main(_argv):
 
     img = tf.image.decode_image(open(FLAGS.image, 'rb').read(), channels=3)
     img = tf.expand_dims(img, 0)
-    img = transform_images(img, 416)
+    img = transform_images(img, 224)
 
     t1 = time.time()
     outputs = infer(img)

@@ -327,7 +327,7 @@ train.py:
     (default: '80')
     (an integer)
   --size: image size
-    (default: '416')
+    (default: '224')
     (an integer)
   --[no]tiny: yolov3 or yolov3-tiny
     (default: 'false')

@@ -9,7 +9,7 @@ from tensorflow.keras.callbacks import (
     ReduceLROnPlateau,
     EarlyStopping,
     ModelCheckpoint,
-    TensorBoard
+    TensorBoard,
 )
 from yolov3_tf2.models import (
     YoloV3, YoloV3Tiny, YoloLoss,
@@ -36,7 +36,7 @@ flags.DEFINE_enum('transfer', 'none',
                   'no_output: Transfer all but output, '
                   'frozen: Transfer and freeze all, '
                   'fine_tune: Transfer all and freeze darknet only')
-flags.DEFINE_integer('size', 416, 'image size')
+flags.DEFINE_integer('size', 224, 'image size')
 flags.DEFINE_integer('epochs', 2, 'number of epochs')
 flags.DEFINE_integer('batch_size', 8, 'batch size')
 flags.DEFINE_float('learning_rate', 1e-3, 'learning rate')
@@ -74,8 +74,7 @@ def setup_model():
 
         if FLAGS.transfer == 'darknet':
             model.get_layer('yolo_darknet').set_weights(
-                model_pretrained.get_layer('yolo_darknet').get_weights())
-            freeze_all(model.get_layer('yolo_darknet'))
+                model_pretrained.get_layer('yolo_darknet').get_weights()) 
         elif FLAGS.transfer == 'no_output':
             for l in model.layers:
                 if not l.name.startswith('yolo_output'):
@@ -94,8 +93,7 @@ def setup_model():
             freeze_all(model)
 
     optimizer = tf.keras.optimizers.Adam(lr=FLAGS.learning_rate)
-    loss = [YoloLoss(anchors[mask], classes=FLAGS.num_classes)
-            for mask in anchor_masks]
+    loss = YoloLoss(anchors[anchor_masks[0]], classes=FLAGS.num_classes)
 
     model.compile(optimizer=optimizer, loss=loss,
                   run_eagerly=(FLAGS.mode == 'eager_fit'))
@@ -128,9 +126,11 @@ def main(_argv):
         train_dataset = dataset.load_fake_dataset()
     train_dataset = train_dataset.shuffle(buffer_size=512)
     train_dataset = train_dataset.batch(FLAGS.batch_size)
-    train_dataset = train_dataset.map(lambda x, y: (
-        dataset.transform_images(x, FLAGS.size),
-        dataset.transform_targets(y, anchors, anchor_masks, FLAGS.size)))
+        
+     #for batch, (images, labels) in enumerate(train_dataset):
+     #    a = dataset.transform_targets(labels, anchors, anchor_masks, FLAGS.size)
+        
+    train_dataset = train_dataset.map(lambda x, y: (dataset.transform_images(x, FLAGS.size), dataset.transform_targets(y, anchors, anchor_masks, FLAGS.size)))
     train_dataset = train_dataset.prefetch(
         buffer_size=tf.data.experimental.AUTOTUNE)
 
@@ -194,8 +194,8 @@ def main(_argv):
     else:
 
         callbacks = [
-            ReduceLROnPlateau(verbose=1),
-            EarlyStopping(patience=3, verbose=1),
+            ReduceLROnPlateau(verbose=1,patience=100),
+            EarlyStopping(patience=1000, verbose=1),
             ModelCheckpoint('checkpoints/yolov3_train_{epoch}.tf',
                             verbose=1, save_weights_only=True),
             TensorBoard(log_dir='logs')

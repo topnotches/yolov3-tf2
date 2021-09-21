@@ -21,7 +21,7 @@ flags.DEFINE_string('output', './checkpoints/yolov3.tflite',
 flags.DEFINE_string('classes', './data/coco.names', 'path to classes file')
 flags.DEFINE_string('image', './data/girl.png', 'path to input image')
 flags.DEFINE_integer('num_classes', 80, 'number of classes in the model')
-flags.DEFINE_integer('size', 416, 'image size')
+flags.DEFINE_integer('size', 224, 'image size')
 
 
 def main(_argv):
@@ -55,7 +55,7 @@ def main(_argv):
 
     img = tf.image.decode_image(open(FLAGS.image, 'rb').read(), channels=3)
     img = tf.expand_dims(img, 0)
-    img = transform_images(img, 416)
+    img = transform_images(img, 224)
 
     t1 = time.time()
     outputs = interpreter.set_tensor(input_details[0]['index'], img)

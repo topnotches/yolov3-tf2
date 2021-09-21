@@ -26,7 +26,7 @@ def transform_targets_for_output(y_true, grid_size, anchor_idxs):
                 box = y_true[i][j][0:4]
                 box_xy = (y_true[i][j][0:2] + y_true[i][j][2:4]) / 2
 
-                anchor_idx = tf.cast(tf.where(anchor_eq), tf.int32)
+                anchor_idx = tf.cast(tf.where(anchor_eq), tf.int32) 
                 grid_xy = tf.cast(box_xy // (1/grid_size), tf.int32)
 
                 # grid[y][x][anchor] = (tx, ty, bw, bh, obj, class)
@@ -48,12 +48,12 @@ def transform_targets(y_train, anchors, anchor_masks, size):
     grid_size = size // 32
 
     # calculate anchor index for true boxes
-    anchors = tf.cast(anchors, tf.float32)
-    anchor_area = anchors[..., 0] * anchors[..., 1]
-    box_wh = y_train[..., 2:4] - y_train[..., 0:2]
-    box_wh = tf.tile(tf.expand_dims(box_wh, -2),
-                     (1, 1, tf.shape(anchors)[0], 1))
-    box_area = box_wh[..., 0] * box_wh[..., 1]
+    anchors = tf.cast(anchors, tf.float32)                          #type to f32
+    anchor_area = anchors[..., 0] * anchors[..., 1]                 #area of 9 anchors
+    box_wh = y_train[..., 2:4] - y_train[..., 0:2]                  #area of
+    box_wh = tf.tile(tf.expand_dims(box_wh, -2),                    
+                     (1, 1, tf.shape(anchors)[0], 1))                   
+    box_area = box_wh[..., 0] * box_wh[..., 1]                          
     intersection = tf.minimum(box_wh[..., 0], anchors[..., 0]) * \
         tf.minimum(box_wh[..., 1], anchors[..., 1])
     iou = intersection / (box_area + anchor_area - intersection)
@@ -61,11 +61,10 @@ def transform_targets(y_train, anchors, anchor_masks, size):
     anchor_idx = tf.expand_dims(anchor_idx, axis=-1)
 
     y_train = tf.concat([y_train, anchor_idx], axis=-1)
-
-    for anchor_idxs in anchor_masks:
-        y_outs.append(transform_targets_for_output(
-            y_train, grid_size, anchor_idxs))
-        grid_size *= 2
+    #print(anchor_masks)
+    anchor_idxs = anchor_masks[0]
+    y_outs.append(transform_targets_for_output(y_train, grid_size, anchor_idxs))
+    grid_size *= 2
 
     return tuple(y_outs)
 
@@ -118,7 +117,7 @@ def parse_tfrecord(tfrecord, class_table, size):
     return x_train, y_train
 
 
-def load_tfrecord_dataset(file_pattern, class_file, size=416):
+def load_tfrecord_dataset(file_pattern, class_file, size=224):
     LINE_NUMBER = -1  # TODO: use tf.lookup.TextFileIndex.LINE_NUMBER
     class_table = tf.lookup.StaticHashTable(tf.lookup.TextFileInitializer(
         class_file, tf.string, 0, tf.int64, LINE_NUMBER, delimiter="\n"), -1)
