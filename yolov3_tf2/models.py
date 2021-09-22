@@ -226,7 +226,7 @@ def yolo_boxes(pred, anchors, classes):
         pred, (2, 2, 1, classes), axis=-1)
 
     box_xy = tf.sigmoid(box_xy)
-    objectness = (objectness)
+    objectness = tf.sigmoid(objectness)
     class_probs = tf.sigmoid(class_probs)
     pred_box = tf.concat((box_xy, box_wh), axis=-1)  # original xywh for loss
 
@@ -308,19 +308,14 @@ def MobilenetV2(name = None, anchors = yolo_anchors, masks = yolo_anchor_masks, 
     x = Bottleneck(x, t = 6,fin = 96, fout = 160, n = 3, s = 2)
     x = Bottleneck(x, t = 6,fin = 160, fout = 320, n = 3, s = 1)
 
-    x = ZeroPadding2D(((1, 1), (1, 1)))(x)  # top left half-padding
-    x = Conv2D(filters=1280, kernel_size=3,
-        strides=1, padding='valid',
+    x = Conv2D(filters=1280, kernel_size=1,
+        strides=1, padding='same',
         use_bias=False, kernel_regularizer='l2')(x)
     x = BatchNormalization()(x)
     x = LeakyReLU(alpha=0.1)(x)
 
-    x = ZeroPadding2D(((1, 1), (1, 1)))(x)  # top left half-padding
-    x = Conv2D(filters=512, kernel_size=3,
-    strides=1, padding='valid',
-    use_bias=False, kernel_regularizer='l2')(x)
-    x = BatchNormalization()(x)
-    x = LeakyReLU(alpha=0.1)(x)
+
+    x = YoloConv(512, name='yolo_conv_0')(x)
     
     
     output_0 = YoloOutput(512, len(masks[0]), classes, name='yolo_output_0')(x)
@@ -448,13 +443,11 @@ def YoloLoss(anchors, classes=80, ignore_thresh=0.5):
             tf.reduce_sum(tf.square(true_xy - pred_xy), axis=-1)
         wh_loss = obj_mask * box_loss_scale * \
             tf.reduce_sum(tf.square(true_wh - pred_wh), axis=-1)
-        obj_loss = tf.reduce_sum(tf.square((true_obj - pred_obj)), axis=-1)
+
+      
+        obj_loss = binary_crossentropy(true_obj, pred_obj)
         obj_loss = obj_mask * obj_loss + \
             (1 - obj_mask) * ignore_mask * obj_loss
-      
-        #obj_loss = binary_crossentropy(true_obj, pred_obj)
-        #obj_loss = obj_mask * obj_loss + \
-        #    (1 - obj_mask) * ignore_mask * obj_loss
         # TODO: use binary_crossentropy instead
   
         if classes == 1:
